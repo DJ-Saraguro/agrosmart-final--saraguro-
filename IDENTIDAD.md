@@ -8,7 +8,7 @@
 - **Cédula: 1728631191**
 - **NRC: 30405**
 - **Nonce del examen: AGS-2026**            <!-- código publicado por el docente en la sesión -->
-- **Fecha y hora de inicio: 2026-07-30  19:44**      <!-- formato: 2026-XX-XX HH:MM -->
+- **Fecha y hora de inicio: 2026-07-30  19:44 **      <!-- formato: 2026-XX-XX HH:MM -->
 
 ---
 
@@ -19,11 +19,11 @@ se busca en una tabla.
 
 | # | Parámetro | Cómo se obtiene | Mi valor |
 |:---:|-----------|-----------------|----------|
-| — | `NN` | los 2 últimos dígitos de mi cédula |`91` |
-| 1 | Nombre de la tabla | `tbl_productos_base_` + `NN` |`tbl_productos_base_91`|
+| — | `NN` | los 2 últimos dígitos de mi cédula | `91` |
+| 1 | Nombre de la tabla | `tbl_productos_base_` + `NN` | `tbl_productos_base_91` |
 | 2 | Puerto | `81` + `NN` |`8191` |
-| 3 | Categoría | según el **último dígito** (tabla de abajo) |Cacao |
-| — | Audiencia para el prompt de IA | según la categoría |exportadores europeos|
+| 3 | Categoría | según el **último dígito** (tabla de abajo) | Cacao |
+| — | Audiencia para el prompt de IA | según la categoría | exportadores europeos |
 
 **Tabla de categorías:**
 
