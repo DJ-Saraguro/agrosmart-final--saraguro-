@@ -21,7 +21,7 @@ se busca en una tabla.
 |:---:|-----------|-----------------|----------|
 | — | `NN` | los 2 últimos dígitos de mi cédula |`91` |
 | 1 | Nombre de la tabla | `tbl_productos_base_` + `NN` |`tbl_productos_base_91`|
-| 2 | Puerto | `81` + `NN` | |
+| 2 | Puerto | `81` + `NN` |`8191` |
 | 3 | Categoría | según el **último dígito** (tabla de abajo) |Cacao |
 | — | Audiencia para el prompt de IA | según la categoría |exportadores europeos|
 
