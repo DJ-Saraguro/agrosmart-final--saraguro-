@@ -140,29 +140,38 @@ Como Producto carece de setters, la función no altera la instancia recibida. En
 **4.1** Pega tu método `obtenerProductosComercializables()` completo.
 
 ```java
-
+public Flux<Producto> obtenerProductosComercializables() {
+    return Mono.fromCallable(repository::findAll)
+            .subscribeOn(Schedulers.boundedElastic())
+            .flatMapMany(Flux::fromIterable)
+            .map(ProductoMapper::toDominio)
+            .map(ProductoFilters.A_MAYUSCULAS)
+            .filter(ProductoFilters.IS_VALID)
+            .doOnNext(ProductoFilters.LOG_PRODUCTO)
+            .defaultIfEmpty(PRODUCTO_GENERICO);
+}
 ```
 
 **4.2** ¿Qué pasa **exactamente** si eliminas
 `.subscribeOn(Schedulers.boundedElastic())` de ese método? Si lo probaste, indica qué
 hilo aparecía en el log antes y después.
 
->
+>Si elimino .subscribeOn(Schedulers.boundedElastic()), la consulta JDBC bloqueante (repository.findAll()) se ejecuta directamente en el hilo que se suscribe, que en WebFlux sobre Netty es el event loop (hilos del tipo reactor-http-nio-X). Al bloquear este hilo con operaciones I/O síncronas de base de datos, se paraliza la capacidad del servidor para procesar otras peticiones HTTP concurrentes. Con el operador activo, el log muestra que la consulta corre en boundedElastic-X, liberando inmediatamente a reactor-http-nio-X.
 
 **4.3** ¿Por qué `Mono.fromCallable(...)` y no `Mono.just(repository.findAll())`?
 (pista: cuándo se ejecuta cada uno)
 
->
+>Mono.just(...) evalúa su argumento de forma inmediata y ansiosa (eager) en el momento en que se construye el pipeline, por lo que repository.findAll() se ejecutaría sincrónicamente en el hilo llamante antes de que exista una suscripción. En cambio, Mono.fromCallable(...) difiere (lazy evaluation) la ejecución de la lambda hasta el momento del .subscribe(), permitiendo que dicha llamada bloqueante sea delegada correctamente al pool de hilos de Schedulers.boundedElastic().
 
 **4.4** En **tu** código, ¿dónde usaste `defaultIfEmpty` y dónde `switchIfEmpty`, y por
 qué no son intercambiables en esos dos lugares?
 
->
+>Usé .defaultIfEmpty(PRODUCTO_GENERICO) en obtenerProductosComercializables() porque si el flujo queda vacío tras aplicar el filtro, necesito emitir un valor estático de respaldo (Producto). Por otro lado, usé .switchIfEmpty(Mono.error(new ProductoNoEncontradoException(id))) en buscarPorId(id) porque ante la ausencia del ID requiero conmutar hacia un nuevo Publisher (Mono.error) que propague la excepción en el pipeline. No son intercambiables porque defaultIfEmpty solo recibe un valor literal (T), no un Publisher<T> ni permite propagar un Mono.error de forma reactiva.
 
 **4.5** ¿Por qué `doOnNext` no sirve para transformar el elemento, si aparentemente
 "recibe" el producto?
 
->
+>Porque doOnNext(Consumer<? super T>) es un operador de efectos secundarios (side-effects) de solo lectura. Su contrato recibe una interfaz funcional Consumer (que retorna void), diseñada para inspeccionar o registrar el elemento (como en ProductoFilters.LOG_PRODUCTO) sin alterar el flujo original. Para transformar un objeto en otro se requiere una Function dentro de operadores como .map() o .flatMap().
 
 ---
 
