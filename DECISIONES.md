@@ -95,27 +95,45 @@ lo fuera? (piensa en la restricción `unique` de `nombre_producto`)
 **3.1** ¿Por qué tienes **dos** clases (`ProductoEntity` y `Producto`) en lugar de una?
 ¿Qué te impide hacer inmutable directamente la entidad de Hibernate?
 
->
+>Tengo dos clases para separar la **capa de persistencia** (`ProductoEntity`) de mi **capa de dominio** (`Producto`).
+> Lo que me impide hacer inmutable a `ProductoEntity` es la especificación de JPA/Hibernate, la cual exige por diseño que las entidades sean mutables, cuenten con un constructor vacío sin argumentos y permitan modificar su estado (a través de setters o reflexión de campos) para que el ORM pueda instanciar los proxies, hidratar la entidad desde la tabla `tbl_productos_base_91` y gestionar el contexto de persistencia. Por su parte, `Producto` es mi modelo de dominio 100 % inmutable (`final`, sin setters y con atributos `private final`), garantizando que sea seguro entre hilos (*thread-safe*) para los flujos reactivos.
 
 **3.2** Escribe el código exacto de **tus dos** copias defensivas e indica en qué línea
 está cada una.
 
 ```java
+this.correosNotificacion = correosNotificacion != null 
+                ? new ArrayList<>(correosNotificacion) 
+                : new ArrayList<>();
 
 ```
+public List<String> getCorreosNotificacion() {
+        return Collections.unmodifiableList(new ArrayList<>(correosNotificacion));
+    }
 
 **3.3** ¿Por qué la copia defensiva **solo en el getter** no sería suficiente? Describe
 el ataque concreto que quedaría abierto sobre **tu** clase.
 
->
+>Si solo hiciera la copia en el getter, el constructor guardaría la referencia original de la lista recibida (this.correosNotificacion = correosNotificacion;).
+
+Ataque concreto: Un código externo podría instanciar una lista List<String> correos = new ArrayList<>(); correos.add("ventas@cacao.ec");, pasarla a mi constructor new Producto(1L, "Cacao", "Cacao", precio, correos) y, posteriormente, ejecutar correos.add("hacker@mail.com"); o correos.clear(); desde afuera. Como mi objeto seguiría apuntando a esa misma referencia en memoria, su estado interno se alteraría sin haber invocado ningún método o setter de Producto, rompiendo la inmutabilidad.
 
 **3.4** ¿Cómo implementaste `A_MAYUSCULAS` para no mutar el `Producto` recibido?
 
 ```java
 
-```
+```public static final Function<Producto, Producto> A_MAYUSCULAS = producto ->
+            new Producto(
+                    producto.getId(),
+                    producto.getNombre() != null ? producto.getNombre().toUpperCase() : null,
+                    producto.getCategoria(),
+                    producto.getPrecioUsd(),
+                    producto.getCorreosNotificacion()
+            );
 
 ---
+Como Producto carece de setters, la función no altera la instancia recibida. En su lugar, instancia y retorna un nuevo objeto Producto (new Producto(...)) conservando el ID, categoría, precio y correos originales, pero pasando producto.getNombre().toUpperCase() como nuevo nombre.
+
 
 ## Fase 4 — Servicio reactivo y aislamiento del bloqueo
 
