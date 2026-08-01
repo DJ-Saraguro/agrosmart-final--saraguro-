@@ -17,10 +17,10 @@
 
 ## Datos
 
-- **Nombre:**
-- **Cédula:**
-- **NN (dos últimos dígitos):**
-- **Categoría asignada (según el último dígito):**
+- **Nombre: David Saraguro**
+- **Cédula:1728631191**
+- **NN (dos últimos dígitos):91**
+- **Categoría asignada (según el último dígito):Cacao**
 
 ---
 
