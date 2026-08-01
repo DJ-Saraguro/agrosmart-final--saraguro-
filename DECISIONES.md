@@ -180,23 +180,42 @@ qué no son intercambiables en esos dos lugares?
 **5.1** Pega tu interfaz `AgroSmartAIService` completa.
 
 ```java
+package ec.edu.espe.agrosmart.service;
 
+import dev.langchain4j.service.spring.AiService;
+import dev.langchain4j.service.UserMessage;
+import dev.langchain4j.service.V;
+
+@AiService
+public interface AgroSmartAIService {
+
+    @UserMessage("""
+            Redacta una frase publicitaria de máximo 100 caracteres para vender \
+            {{producto}} dirigido a {{audiencia}}.""")
+    String generarPublicidad(@V("producto") String producto,
+                             @V("audiencia") String audiencia);
+}
 ```
 
 **5.2** ¿Qué hace `@V("producto")` y qué pasaría si lo quitaras dejando solo el
 parámetro?
 
->
+>La anotación @V("producto") vincula explícitamente el parámetro de Java con la variable de plantilla {{producto}} en el prompt de @UserMessage. Si lo quitara, al compilar sin el flag de retención de nombres de parámetros (-parameters), LangChain4j no sabría cómo interpolar el argumento, provocando un fallo en tiempo de ejecución o enviando la cadena literal {{producto}} al modelo de lenguaje.
 
 **5.3** ¿En qué archivo y con qué líneas configuraste el modelo? ¿Por qué **no** hizo
 falta declarar un `@Bean`?
 
->
+>Lo configuré en src/main/resources/application-prod.properties con las líneas:
+langchain4j.open-ai.chat-model.api-key=demo
+langchain4j.open-ai.chat-model.model-name=gpt-4o-mini
+langchain4j.open-ai.chat-model.timeout=30s
+
+No declaré un @Bean porque el starter langchain4j-open-ai-spring-boot-starter incluye autoconfiguración en Spring Boot: escanea el Environment buscando el prefijo langchain4j.open-ai.chat-model.* e instancia y registra automáticamente el ChatLanguageModel en el contexto.
 
 **5.4** ¿Por qué la llamada a la IA también necesita `boundedElastic`, si no es una
 consulta a base de datos?
 
->
+>Aunque no sea base de datos, la comunicación con OpenAI a través de LangChain4j implica una petición HTTP síncrona y bloqueante. Si se llamara en el event loop de Netty, el hilo quedaría inmovilizado esperando la respuesta externa de la red, degradando toda la concurrencia de la aplicación.
 
 **5.5** Si tu proveedor devolvió un error durante el examen, pega el mensaje real y la
 respuesta que produjo tu `onErrorResume`.
@@ -212,17 +231,130 @@ respuesta que produjo tu `onErrorResume`.
 **6.1** Pega la salida real de tus cuatro `curl`.
 
 ```
+PS C:\agrosmart-final--saraguro-> curl http://localhost:8191/api/productos                                                                                                                                
 
+Advertencia de seguridad: riesgo de ejecución de script
+Invoke-WebRequest analiza el contenido de la página web. El código de script de la página web se puede ejecutar cuando se analiza la página.
+      ACCIÓN RECOMENDADA:
+      Usa el modificador -UseBasicParsing para evitar la ejecución de código de script.
+
+      ¿Quieres continuar?
+    
+[S] Sí  [O] Sí a todo  [N] No  [T] No a todo  [U] Suspender  [?] Ayuda (el valor predeterminado es "N"): s
+
+
+StatusCode        : 200
+StatusDescription : OK
+Content           : [{"id":1,"nombre":"CACAO FINO DE AROMA","categoria":"Cacao","precioUsd":15.50,"correosNotificacion":["export@cacao.ec","ventas@cacao.ec"]},{"id":2,"nombre":"CACAO 
+                    CCN-51","categoria":"Cacao","precioUs...
+RawContent        : HTTP/1.1 200 OK
+                    transfer-encoding: chunked
+                    Content-Type: application/json
+                    
+                    [{"id":1,"nombre":"CACAO FINO DE AROMA","categoria":"Cacao","precioUsd":15.50,"correosNotificacion":["export@cacao.ec","v...
+Forms             : {}
+Headers           : {[transfer-encoding, chunked], [Content-Type, application/json]}
+Images            : {}
+InputFields       : {}
+Links             : {}
+ParsedHtml        : mshtml.HTMLDocumentClass
+RawContentLength  : 372
+
+
+
+PS C:\agrosmart-final--saraguro-> curl http://localhost:8191/api/productos/1 
+
+Advertencia de seguridad: riesgo de ejecución de script
+Invoke-WebRequest analiza el contenido de la página web. El código de script de la página web se puede ejecutar cuando se analiza la página.
+      ACCIÓN RECOMENDADA:
+      Usa el modificador -UseBasicParsing para evitar la ejecución de código de script.
+
+      ¿Quieres continuar?
+    
+[S] Sí  [O] Sí a todo  [N] No  [T] No a todo  [U] Suspender  [?] Ayuda (el valor predeterminado es "N"): s
+
+
+StatusCode        : 200
+StatusDescription : OK
+Content           : {"id":1,"nombre":"Cacao Fino de Aroma","categoria":"Cacao","precioUsd":15.50,"correosNotificacion":["export@cacao.ec","ventas@cacao.ec"]}
+RawContent        : HTTP/1.1 200 OK
+                    Content-Length: 137
+                    Content-Type: application/json
+                                                                                                                                                                                                          
+                    {"id":1,"nombre":"Cacao Fino de Aroma","categoria":"Cacao","precioUsd":15.50,"correosNotificacion":["export@cacao.ec","ventas@ca...                                                   
+Forms             : {}                                                                                                                                                                                    
+Headers           : {[Content-Length, 137], [Content-Type, application/json]}                                                                                                                             
+Images            : {}
+InputFields       : {}
+Links             : {}
+ParsedHtml        : mshtml.HTMLDocumentClass
+RawContentLength  : 137
+
+
+
+PS C:\agrosmart-final--saraguro-> curl -i http://localhost:8191/api/productos/9999 
+
+cmdlet Invoke-WebRequest en la posición 1 de la canalización de comandos
+Proporcione valores para los parámetros siguientes:
+Uri: 
+PS C:\agrosmart-final--saraguro-> curl.exe -i http://localhost:8191/api/productos/9999
+HTTP/1.1 404 Not Found
+Content-Type: application/json
+Content-Length: 127
+
+{"timestamp":"2026-08-01T03:44:19.140Z","path":"/api/productos/9999","status":404,"error":"Not Found","requestId":"0fb8a3f5-9"}
+PS C:\agrosmart-final--saraguro-> curl "http://localhost:81XX/api/agrosmart/publicidad?producto=Cacao%20fino%20de%20aroma&audiencia=exportadores%20europeos"
+>> 
+Invoke-WebRequest : No se puede enlazar el parámetro 'Uri'. No se puede convertir el valor 
+"http://localhost:81XX/api/agrosmart/publicidad?producto=Cacao%20fino%20de%20aroma&audiencia=exportadores%20europeos" al tipo "System.Uri". Error: "URI no válido: se especificó un puerto no válido."
+En línea: 1 Carácter: 6
++ curl "http://localhost:81XX/api/agrosmart/publicidad?producto=Cacao%2 ...
++      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Invoke-WebRequest], ParameterBindingException
+    + FullyQualifiedErrorId : CannotConvertArgumentNoMessage,Microsoft.PowerShell.Commands.InvokeWebRequestCommand
+ 
+PS C:\agrosmart-final--saraguro-> curl "http://localhost:8191/api/agrosmart/publicidad?producto=Cacao%20fino%20de%20aroma&audiencia=exportadores%20europeos"
+>> 
+
+Advertencia de seguridad: riesgo de ejecución de script
+Invoke-WebRequest analiza el contenido de la página web. El código de script de la página web se puede ejecutar cuando se analiza la página.
+      ACCIÓN RECOMENDADA:
+      Usa el modificador -UseBasicParsing para evitar la ejecución de código de script.
+
+      ¿Quieres continuar?
+    
+[S] Sí  [O] Sí a todo  [N] No  [T] No a todo  [U] Suspender  [?] Ayuda (el valor predeterminado es "N"): s
+
+
+StatusCode        : 200
+StatusDescription : OK
+Content           : "Descubre el auténtico cacao fino de aroma: calidad premium para deleitar el paladar europeo."
+RawContent        : HTTP/1.1 200 OK
+                    Content-Length: 95
+                    Content-Type: text/plain;charset=UTF-8
+                    
+                    "Descubre el auténtico cacao fino de aroma: calidad premium para deleitar el paladar europeo."
+Forms             : {}
+Headers           : {[Content-Length, 95], [Content-Type, text/plain;charset=UTF-8]}
+Images            : {}
+InputFields       : {}
+Links             : {}
+ParsedHtml        : mshtml.HTMLDocumentClass
+RawContentLength  : 95
+
+
+
+PS C:\agrosmart-final--saraguro-> 
 ```
 
 **6.2** ¿Cómo lograste que el id inexistente responda **404** y no 500?
 
->
+>Añadiendo la anotación @ResponseStatus(HttpStatus.NOT_FOUND) sobre mi clase ProductoNoEncontradoException. Al propagarse esta excepción en el flujo mediante switchIfEmpty(Mono.error(...)), WebFlux intercepta el error y mapea la respuesta HTTP al código de estado 404 en lugar de devolver un error interno 500.
 
 **6.3** ¿Qué pasaría si tu controlador devolviera `List<Producto>` en lugar de
 `Flux<Producto>`? ¿Seguiría compilando? ¿Seguiría siendo no bloqueante?
 
->
+>Si devolviera List<Producto>, la compilación podría funcionar únicamente si se resolviera de forma síncrona (forzando un bloqueo como .collectList().block()), pero dejaría de ser no bloqueante por completo. Al obligar a materializar todos los registros en memoria antes de responder, se rompe el streaming reactivo y se bloquean los hilos del event loop de Netty.
 
 ---
 
@@ -231,28 +363,125 @@ respuesta que produjo tu `onErrorResume`.
 **7.1** Pega la salida real de tus pruebas (`./mvnw test` o `./gradlew test`).
 
 ```
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] -----------------------< ec.edu.espe:agrosmart >------------------------
+[INFO] Building  0.0.1-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ agrosmart ---
+[INFO] Copying 2 resources from src\main\resources to target\classes
+[INFO] Copying 0 resource from src\main\resources to target\classes
+[INFO] 
+[INFO] --- compiler:3.15.0:compile (default-compile) @ agrosmart ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ agrosmart ---
+[INFO] Copying 1 resource from src\test\resources to target\test-classes
+[INFO] 
+[INFO] --- compiler:3.15.0:testCompile (default-testCompile) @ agrosmart ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.5.6:test (default-test) @ agrosmart ---
+[INFO] Using auto detected provider org.apache.maven.surefire.junitplatform.JUnitPlatformProvider
+[INFO] 
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+[INFO] Running ec.edu.espe.agrosmart.AgrosmartApplicationTests
+22:28:40.051 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [ec.edu.espe.agrosmart.AgrosmartApplicationTests]: AgrosmartApplicationTests does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+22:28:40.126 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration ec.edu.espe.agrosmart.AgrosmartApplication for test class ec.edu.espe.agrosmart.AgrosmartApplicationTests
+22:28:40.193 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [ec.edu.espe.agrosmart.AgrosmartApplicationTests]: AgrosmartApplicationTests does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+22:28:40.194 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration ec.edu.espe.agrosmart.AgrosmartApplication for test class ec.edu.espe.agrosmart.AgrosmartApplicationTests
 
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v4.1.0)
+
+2026-07-31T22:28:40.426-05:00  INFO 2032 --- [agrosmart] [           main] e.e.e.a.AgrosmartApplicationTests        : Starting AgrosmartApplicationTests using Java 26 with PID 2032 (started by Administrador in C:\agrosmart-final--saraguro-)
+2026-07-31T22:28:40.427-05:00  INFO 2032 --- [agrosmart] [           main] e.e.e.a.AgrosmartApplicationTests        : The following 1 profile is active: "test"
+2026-07-31T22:28:40.806-05:00  INFO 2032 --- [agrosmart] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-07-31T22:28:40.894-05:00  INFO 2032 --- [agrosmart] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 82 ms. Found 1 JPA repository interface.
+2026-07-31T22:28:40.951-05:00 DEBUG 2032 --- [agrosmart] [           main] d.l.s.spring.ClassPathAiServiceScanner   : Identified candidate component class: file [C:\agrosmart-final--saraguro-\target\classes\ec\edu\espe\agrosmart\service\AgroSmartAIService.class]
+2026-07-31T22:28:41.158-05:00  INFO 2032 --- [agrosmart] [           main] org.hibernate.orm.jpa                    : HHH008540: Processing PersistenceUnitInfo [name: default]
+2026-07-31T22:28:41.213-05:00  INFO 2032 --- [agrosmart] [           main] org.hibernate.orm.core                   : HHH000001: Hibernate ORM core version 7.4.1.Final
+2026-07-31T22:28:41.532-05:00  INFO 2032 --- [agrosmart] [           main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-07-31T22:28:41.553-05:00  INFO 2032 --- [agrosmart] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-07-31T22:28:41.670-05:00  INFO 2032 --- [agrosmart] [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection conn0: url=jdbc:h2:mem:testdb user=SA
+2026-07-31T22:28:41.671-05:00  INFO 2032 --- [agrosmart] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-07-31T22:28:41.686-05:00  WARN 2032 --- [agrosmart] [           main] org.hibernate.orm.deprecation            : HHH90000025: H2Dialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-07-31T22:28:41.702-05:00  INFO 2032 --- [agrosmart] [           main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+        Database JDBC URL [jdbc:h2:mem:testdb]
+        Database driver: H2 JDBC Driver
+        Database dialect: H2Dialect
+        Database version: 2.4.240
+        Default catalog/schema: TESTDB/PUBLIC
+        Autocommit mode: undefined/unknown
+        Isolation level: READ_COMMITTED [default READ_COMMITTED]
+        JDBC fetch size: 100
+        Pool: DataSourceConnectionProvider
+        Minimum pool size: undefined/unknown
+        Maximum pool size: undefined/unknown
+2026-07-31T22:28:42.297-05:00  INFO 2032 --- [agrosmart] [           main] org.hibernate.orm.core                   : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-07-31T22:28:42.324-05:00  INFO 2032 --- [agrosmart] [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-07-31T22:28:42.390-05:00  INFO 2032 --- [agrosmart] [           main] o.s.d.j.r.query.QueryEnhancerFactories   : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-07-31T22:28:42.992-05:00  INFO 2032 --- [agrosmart] [           main] e.e.e.a.AgrosmartApplicationTests        : Started AgrosmartApplicationTests in 2.748 seconds (process running for 3.55)
+Mockito is currently self-attaching to enable the inline-mock-maker. This will no longer work in future releases of the JDK. Please add Mockito as an agent to your build as described in Mockito's documentation: https://javadoc.io/doc/org.mockito/mockito-core/latest/org.mockito/org/mockito/Mockito.html#0.3
+Java HotSpot(TM) 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+WARNING: A Java agent has been loaded dynamically (C:\Users\Administrador\.m2\repository\net\bytebuddy\byte-buddy-agent\1.18.10\byte-buddy-agent-1.18.10.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 3.539 s -- in ec.edu.espe.agrosmart.AgrosmartApplicationTests
+[INFO] Running ec.edu.espe.agrosmart.domain.ProductoFiltersTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.005 s -- in ec.edu.espe.agrosmart.domain.ProductoFiltersTest
+[INFO] Running ec.edu.espe.agrosmart.domain.ProductoTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.006 s -- in ec.edu.espe.agrosmart.domain.ProductoTest
+[INFO] Running ec.edu.espe.agrosmart.service.ProductoServiceTest
+Producto procesado [ID: 101, Nombre: CACAO ARRIBA]
+Producto procesado [ID: 102, Nombre: CACAO PREMIUM]
+Producto procesado [ID: 103, Nombre: CACAO BIO]
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.210 s -- in ec.edu.espe.agrosmart.service.ProductoServiceTest
+[INFO] Running ec.edu.espe.agrosmart.service.PublicidadServiceTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.049 s -- in ec.edu.espe.agrosmart.service.PublicidadServiceTest
+[INFO] 
+[INFO] Results:
+[INFO] 
+[INFO] Tests run: 12, Failures: 0, Errors: 0, Skipped: 0
+[INFO] 
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  5.537 s
+[INFO] Finished at: 2026-07-31T22:28:43-05:00
+[INFO] ------------------------------------------------------------------------
 ```
 
 **7.2** ¿Cuántos productos espera tu `expectNextCount(...)` y por qué ese número
 concreto? Relaciónalo con tu semilla.
 
->
+>Espera exactamente 3 productos (expectNextCount(3)). Esto se debe a que la regla del examen exige sembrar obligatoriamente 5 productos para toda categoría: 3 productos válidos (con precioUsd > 0 y lista de correos no vacía) y 2 inválidos (uno con precio 0 y otro sin correos). Al evaluar .filter(ProductoFilters.IS_VALID), el flujo emite únicamente los 3 válidos de mi categoría Cacao.
 
 **7.3** ¿Por qué mockeaste `ProductoRepository` en lugar de dejar que la prueba consulte
 PostgreSQL?
 
->
+>Para garantizar que las pruebas unitarias sean rápidas, deterministas y absolutamente aisladas de la infraestructura externa. Si dependieran de una conexión real a PostgreSQL, fallarían en entornos sin base de datos activa o sin red, violando las reglas del checklist de ejecutar en verde y de forma autónoma.
 
 **7.4** ¿Qué demuestra `assertNotSame` que `assertEquals` **no** demuestra en tu prueba
 de copia defensiva?
 
->
+>assertEquals únicamente verifica que el contenido de dos colecciones sea idéntico, lo cual sería verdadero incluso si ambas apuntan al mismo objeto en memoria. assertNotSame comprueba la identidad referencial (==), demostrando de manera incontrovertible que la lista devuelta por el getter o guardada en el constructor es una nueva instancia en memoria distinta a la lista original, garantizando la copia defensiva.
 
 **7.5** ¿Por qué una prueba de un `Flux` que no llama a `verifyComplete()` (o a
 `verify()`) no está probando nada?
 
->
+>Porque en Project Reactor los flujos son lazy (perezosos): ningún operador ni suscripción real se ejecuta hasta que un suscriptor lo demanda. En StepVerifier, configurar llamadas como expectNextCount(3) solo define reglas de validación en un builder; la invocación a .verifyComplete() o .verify() es la que gatilla la suscripción real (.subscribe()) y consume el flujo para probar el comportamiento.
 
 ---
 
@@ -262,19 +491,34 @@ de copia defensiva?
 
 ```
 
+* 8903b76 (HEAD -> feature/documentacion, feature/pruebas) test: agrega pruebas del modelo, logica funcional, flujo reactivo e ia
+* ef98111 (feature/api-reactiva) feat: expone endpoints reactivos y de publicidad
+* 0affe72 (feature/ia-langchain4j) feat: integra langchain4j para publicidad de productos
+* 0c54126 (feature/servicio-reactivo) feat: implementa servicio reactivo con boundedElastic y operadores
+* 84f29a6 (feature/modelo-inmutable) feat: agrega modelo inmutable de producto y logica funcional
+* 1727c8f (feature/persistencia-jpa) feat: agrega entidad jpa de productos y siembra de datos
+*   b10769b (origin/main, origin/HEAD, main) merge: integra configuracion de perfil prod
+|\  
+| * 45feceb (feature/config-perfiles) chore: configura perfil prod con postgresql y puerto propio
+| *   72f7161 Merge branch 'main' into feature/config-perfiles
+| |\  
+| |/  
+|/|   
+* | c374cd3 chore: inicializa proyecto agrosmart con webflux, jpa y langchain4j
+:
 ```
 
 **8.2** ¿Qué fase te tomó más tiempo del previsto y por qué?
 
->
+>La Fase 4 (Servicio reactivo y aislamiento del bloqueo), debido a que requirió estructurar correctamente el encadenamiento no bloqueante de Project Reactor y entender con precisión matemática dónde envolver las consultas JPA dentro de Mono.fromCallable(...).subscribeOn(Schedulers.boundedElastic()) para proteger el event loop de Netty.
 
 **8.3** Si tuvieras 30 minutos más, ¿qué mejorarías **primero** de tu entrega y por qué
 esa y no otra?
 
->
+>Implementaría un manejo centralizado de excepciones con un @RestControllerAdvice y especificación Problem Details (RFC 7807). Esto estandarizaría todas las respuestas de error en formato JSON consistente (tanto para 404 de producto no encontrado como para fallos del proveedor de IA), mejorando la claridad y robustez al consumir la API.
 
 **8.4** Declara honestamente qué herramientas consultaste durante el examen
 (documentación, apuntes, asistentes de IA) y para qué. **Esta declaración no descuenta
 puntaje**; su omisión o falsedad sí constituye falta de honestidad académica.
 
->
+>Declaro haber consultado documentación de Project Reactor para revisar los contratos de switchIfEmpty vs defaultIfEmpty y mas sitios web , los apuntes y códigos de proyectos previos (MediTrack y EduSmart) para las anotaciones @AiService y la estructura de copias defensivas, y asistentes de IA (ChatGPT / Gemini) como apoyo de referencia para consulta de sintaxis y aclaración conceptual, manteniendo mi autoría y sustentación de mi implementación.
