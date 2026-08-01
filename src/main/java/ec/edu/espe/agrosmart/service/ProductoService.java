@@ -11,6 +11,7 @@ import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.util.List;
 
 @Service
@@ -25,14 +26,19 @@ public class ProductoService {
     );
 
     private final ProductoRepository repository;
+    private final AgroSmartAIService aiService;
 
-    public ProductoService(ProductoRepository repository) {
+
+    public ProductoService(ProductoRepository repository, AgroSmartAIService aiService) {
         this.repository = repository;
+        this.aiService = aiService;
     }
+
 
     public Flux<Producto> obtenerProductosComercializables() {
 
         return Mono.fromCallable(repository::findAll)
+                
 
                 .subscribeOn(Schedulers.boundedElastic())
                 
@@ -54,12 +60,25 @@ public class ProductoService {
 
         return Mono.fromCallable(() -> repository.findById(id))
                 
+
                 .subscribeOn(Schedulers.boundedElastic())
                 
                 .flatMap(Mono::justOrEmpty)
-                
+
                 .map(ProductoMapper::toDominio)
                 
                 .switchIfEmpty(Mono.error(new ProductoNoEncontradoException(id)));
+    }
+
+
+    public Mono<String> generarPublicidad(String producto, String audiencia) {
+        return Mono.fromCallable(() -> aiService.generarPublicidad(producto, audiencia))
+                
+                .subscribeOn(Schedulers.boundedElastic())
+                
+                .timeout(Duration.ofSeconds(30))
+                
+                .onErrorResume(e -> Mono.just(
+                        "Publicidad no disponible en este momento (" + e.getClass().getSimpleName() + ")"));
     }
 }
