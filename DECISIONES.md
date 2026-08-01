@@ -28,13 +28,14 @@
 
 **1.1** ¿Qué archivo activa el perfil `prod` y qué línea exacta lo hace?
 
->
+
+>El archivo `src/main/resources/application.properties` activa el perfil mediante la línea exacta: `spring.profiles.active=prod`.
 
 **1.2** Pega la línea del log de arranque donde se ve tu puerto y el perfil activo.
-
 ```
+2026-07-31T20:16:49.913-05:00  INFO 32988 --- [agrosmart] [           main] e.e.espe.agrosmart.AgrosmartApplication  : The following 1 profile is active: "prod"
+2026-07-31T20:16:55.436-05:00  INFO 32988 --- [agrosmart] [           main] o.s.boot.reactor.netty.NettyWebServer    : Netty started on port 8191 (http)
 
-```
 
 **1.3** ¿Qué habría pasado si dejabas `ddl-auto=create-drop` en lugar de `update`?
 Responde pensando en tus datos sembrados.
